@@ -1,0 +1,3 @@
+Instructions: https://www.chromium.org/getting-involved/download-chromium/#downloading-old-builds-of-chrome-chromium
+Chromium Browser Download: https://download-chromium.appspot.com/
+Chromium Driver Download: https://chromedriver.chromium.org/home
