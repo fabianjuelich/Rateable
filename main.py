@@ -4,16 +4,12 @@ from src.scraper import Scraper
 # from src.id3 import ID3
 from src.gui import App
 from configparser import ConfigParser
+from src.config import Config
 
-def convert_rating(stars):
-    max = 256
-    per = stars/4
-    bit = per*max-64
-    return bit
-
-gui = App()
-# scraper = Scraper(False)
+conf = Config()
+scraper = Scraper(log=False, directlink=False)
 # id3 = ID3()
+gui = App(conf, scraper)
 
 if len(sys.argv) > 1:
     file = sys.argv[1]
@@ -21,7 +17,6 @@ if len(sys.argv) > 1:
 else:
     gui.mainloop()
     
-# stars, both = scraper.rate(keyword)
 # id3.modify([file], convert_rating(stars), both)
 
-# print(both)
+print(scraper.get_rating(keyword))
