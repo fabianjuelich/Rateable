@@ -8,9 +8,9 @@ class Scraper():
     def __init__(self, log=False, directlink=False):
         self.log = log
         self.directlink = directlink
-        self.ser = Service(os.path.abspath('assets/chromedriver_win32/chromedriver.exe'))
+        self.ser = Service(os.path.abspath(os.path.join(os.path.dirname(__file__), '../assets/chromedriver_win32/chromedriver.exe')))
         self.opt = webdriver.ChromeOptions()
-        self.opt.binary_location = os.path.abspath('assets/chrome-win/chrome.exe')
+        self.opt.binary_location = os.path.abspath(os.path.join(os.path.dirname(__file__), '../assets/chrome-win/chrome.exe'))
         if self.log:
             self.opt.add_experimental_option("detach", True)  # do not terminate window when finished
         else:
@@ -35,10 +35,8 @@ class Scraper():
         select.click()
         # rating
         stars = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]/span[2]').text
-        both = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]').text.split('\n')[1]
-        count = None    # ToDo: extract from 'both' or read from json
-        self.driver.quit()
-        return stars, both
+        text = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]').text.split('\n')[1]
+        return stars, text
 
     def __convert_rating(self, stars):
         # ToDo: consider edgecases 0 and 5
@@ -47,17 +45,17 @@ class Scraper():
         bit = per*max-64
         return bit
 
-    def __format_count(self, text):
+    def __format_number(self, text):
         i = 1
-        count = ''
+        number = ''
         while text[i-1] != '(':
             i+=1
         while text[i] != ' ':
-            count+=text[i]
+            number+=text[i]
             i+=1
-        return int(count.replace('.', ''))
+        return int(number.replace('.', ''))
 
     def get_rating(self, keyword, byte=False):
         stars, text = self.__scrape_rating(keyword)
         stars = float(stars.replace(',', '.'))
-        return self.__convert_rating(stars) if byte else stars, self.__format_count(text)
+        return self.__convert_rating(stars) if byte else stars, self.__format_number(text)

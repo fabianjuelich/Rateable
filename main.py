@@ -1,22 +1,30 @@
 import sys
-import os
-from src.scraper import Scraper
-# from src.id3 import ID3
-from src.gui import App
-from configparser import ConfigParser
 from src.config import Config
+from src.scraper import Scraper
+from src.keywords import Keywords
+# from src.id3 import ID3
+from src.database import Database
+from src.excel import Excel
+from src.gui import App
+import atexit
 
 conf = Config()
-scraper = Scraper(log=False, directlink=False)
+scraper = Scraper(log=False, directlink=True)
+keywords = Keywords()
 # id3 = ID3()
-gui = App(conf, scraper)
+database = Database(conf.get_db_path())
+excel = Excel()
+gui = App(conf, scraper, keywords, database, excel)  #, id3  # id3.modify([file], convert_rating(stars), both)
 
 if len(sys.argv) > 1:
-    file = sys.argv[1]
-    keyword, _ = os.path.splitext(os.path.basename(file))
+    path = sys.argv[1]
+    for keyword in keywords.get(path):
+        print(keyword)
+        print(scraper.get_rating(keyword))
 else:
     gui.mainloop()
-    
-# id3.modify([file], convert_rating(stars), both)
 
-print(scraper.get_rating(keyword))
+def exit_handler():
+    scraper.driver.quit()
+
+atexit.register(exit_handler)
