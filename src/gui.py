@@ -57,7 +57,7 @@ class App(ctk.CTk):
         if self.confirm_switch:
             os.startfile(self.conf.get_excel_path())
         elif not self.buffer:
-            self.populate(Mode.INSERT)
+            self.populate(Mode.INSERT, self.keywords.get(self.path))
         if not self.confirm_switch:
             if not self.conf.get_excel_path():
                 self.label_info.configure(text='Specify save path')
@@ -86,17 +86,16 @@ class App(ctk.CTk):
         self.label_info.configure(text='☁ Successfully updated')
         self.confirm_switch = True
 
-    def populate(self, mode, data=None):
-        if not data:
-            data = self.keywords.get(self.path)
+    def populate(self, mode, data):
         remaining = len(data)
         self.label_info.configure(text='⏳ Please wait')
         self.update_idletasks()
         for keyword in data:
             start = time.time()
-            stars, number = self.scraper.get_rating(keyword)
+            stars, number, url = self.scraper.get_rating(keyword)
             data[keyword]['stars'] = stars
             data[keyword]['number'] = number
+            data[keyword]['url'] = url
             remaining-=1
             duration = remaining * (time.time()-start)
             if remaining:

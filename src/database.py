@@ -11,6 +11,7 @@ class Database:
                 keyword TEXT PRIMARY KEY,
                 stars REAL,
                 number INTEGER,
+                url TEXT,
                 path TEXT
             )
             ''')
@@ -25,12 +26,14 @@ class Database:
                     ?,
                     ?,
                     ?,
+                    ?,
                     ?
                 )
             ''', (
                     key,
                     value['stars'],
                     value['number'],
+                    value['url'],
                     value['path']
                 )
             )
@@ -41,7 +44,8 @@ class Database:
             self.cursor.execute(f'''
                 UPDATE {self.table} SET
                     stars = {value['stars']},
-                    number = {value['number']}
+                    number = {value['number']},
+                    url = '{value['url']}'
                 WHERE
                     keyword = '{key}'
             ''')

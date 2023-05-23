@@ -36,7 +36,7 @@ class Scraper():
         # rating
         stars = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]/span[2]').text
         text = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]').text.split('\n')[1]
-        return stars, text
+        return stars, text, self.driver.current_url
 
     def __convert_rating(self, stars):
         # ToDo: consider edgecases 0 and 5
@@ -56,6 +56,6 @@ class Scraper():
         return int(number.replace('.', ''))
 
     def get_rating(self, keyword, byte=False):
-        stars, text = self.__scrape_rating(keyword)
+        stars, text, url = self.__scrape_rating(keyword)
         stars = float(stars.replace(',', '.'))
-        return self.__convert_rating(stars) if byte else stars, self.__format_number(text)
+        return self.__convert_rating(stars) if byte else stars, self.__format_number(text), url
