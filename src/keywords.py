@@ -12,7 +12,7 @@ class Keywords():
                 for elem in elements:
                     traverse(os.path.join(path, elem))
             else:
-                keywords.update({os.path.basename(os.path.dirname(path)): {'path': os.path.dirname(path)}})
+                keywords.update({os.path.basename(os.path.dirname(path)): {'path': os.path.normpath(os.path.dirname(path)).replace('\\', '/')}})
 
         traverse(path)
         return keywords

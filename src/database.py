@@ -15,17 +15,34 @@ class Database:
             )
             ''')
 
+    def select(self):
+        return self.cursor.execute(f'SELECT * FROM {self.table}').fetchall()
+
     def insert(self, rows):
         for key, value in rows.items():
             self.cursor.execute(f'''
                 INSERT OR REPLACE INTO {self.table} VALUES (
-                    ?, ?, ?, ?
-                );
-                ''', (
+                    ?,
+                    ?,
+                    ?,
+                    ?
+                )
+            ''', (
                     key,
                     value['stars'],
                     value['number'],
                     value['path']
-                ))
+                )
+            )
         self.connection.commit()
 
+    def update(self, rows):
+        for key, value in rows.items():
+            self.cursor.execute(f'''
+                UPDATE {self.table} SET
+                    stars = {value['stars']},
+                    number = {value['number']}
+                WHERE
+                    keyword = '{key}'
+            ''')
+        self.connection.commit()

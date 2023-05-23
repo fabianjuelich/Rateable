@@ -2,6 +2,11 @@ import customtkinter as ctk
 from tkinter import filedialog
 import os
 import time
+from enum import Enum, auto
+
+class Mode(Enum):
+    INSERT = auto(),
+    UPDATE = auto()
 
 class App(ctk.CTk):
 
@@ -27,7 +32,7 @@ class App(ctk.CTk):
         self.label_info = ctk.CTkLabel(self, text='💽 Select audiobooks')
         self.button_folder = ctk.CTkButton(self, text='📂 Open Explorer', command=self.callback_folder)
         self.button_confirm = ctk.CTkButton(self, text='Confirm', command=self.callback_confirm, state='disabled')
-        self.button_update = ctk.CTkButton(self, text='🔄 Update')  # ToDo: function for refreshing index
+        self.button_update = ctk.CTkButton(self, text='🔄 Update', command=self.callback_update)
         # layout
         self.label_info.grid(row=1, column=1, columnspan=2, pady=(0, 10))
         self.button_folder.grid(row=2, column=1, columnspan=2, pady=(0, 5), sticky='we')
@@ -43,49 +48,64 @@ class App(ctk.CTk):
             self.buffer = False
             self.path = path
             self.confirm_switch = False
-            self.button_confirm.configure(text='Confirm', text_color='#FFFFFF', state='disabled')
-            self.button_folder.configure(text=os.path.basename(path), text_color=("#AAAAAA", "#777777"))
-            self.button_confirm.configure(state='normal')
+            self.button_confirm.configure(text='Confirm', text_color=('#000000', '#FFFFFF'), state='normal')    #, state='disabled'
+            self.button_folder.configure(text=os.path.basename(path), text_color=('#000000', '#FFFFFF'))
             self.folder_switch = True
-            self.label_info.configure(text='✔ Audiobooks selected')
+            self.label_info.configure(text='✅ Audiobooks selected')
 
     def callback_confirm(self):
         if self.confirm_switch:
             os.startfile(self.conf.get_excel_path())
-            self.label_info.configure(text='💽 Select audiobooks')
-            self.button_confirm.configure(text='Confirm', text_color='#FFFFFF', state='disabled')
-            self.confirm_switch = False
         elif not self.buffer:
-            keywords = self.keywords.get(self.path)
-            remaining = len(keywords)
-            self.label_info.configure(text='⏳ Please wait')
-            self.update_idletasks()
-            for keyword in keywords:
-                start = time.time()
-                stars, number = self.scraper.get_rating(keyword)
-                # ToDo: read and add metadata from file
-                keywords[keyword]['stars'] = stars
-                keywords[keyword]['number'] = number
-                remaining-=1
-                duration = remaining * (time.time()-start)
-                if remaining:
-                    self.label_info.configure(text=f'⌛ Please wait ({int(duration)} s left)')
-                else:
-                    self.label_info.configure(text='Specify save path')
-                self.update_idletasks()
-            self.database.insert(keywords)
-            self.buffer = True
-        if not self.conf.get_excel_path():
-            self.conf.set_excel_path(filedialog.asksaveasfilename(initialdir=os.getcwd(), initialfile='ScrapeRate.xlsx'))
+            self.populate(Mode.INSERT)
         if not self.confirm_switch:
+            if not self.conf.get_excel_path():
+                self.label_info.configure(text='Specify save path')
+                self.update_idletasks()
+                self.conf.set_excel_path(filedialog.asksaveasfilename(initialdir=os.getcwd(), initialfile='ScrapeRate.xlsx'))
             try:
                 self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
                 self.confirm_switch = True
                 self.folder_switch = False
-                self.button_folder.configure(text='📂 Open Explorer', text_color='#FFFFFF')
+                self.button_folder.configure(text='📂 Open Explorer', text_color=('#000000', '#FFFFFF'))
                 self.label_info.configure(text=f'💾 Saved to {os.path.basename(self.conf.get_excel_path())}')
-                self.button_confirm.configure(text='Open result', text_color=("#AAAAAA", "#777777"))
+                self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'))
                 self.buffer = False
             except Exception as e:
                 print(e)
                 self.label_info.configure(text='⚠️ Invalid path')
+
+    def callback_update(self):
+        data = {}
+        keywords = [row[0] for row in self.database.select()]
+        for keyword in keywords:
+            data[keyword] = {}
+        self.populate(Mode.UPDATE, data)
+        self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
+        self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state='normal')
+        self.label_info.configure(text='☁ Successfully updated')
+        self.confirm_switch = True
+
+    def populate(self, mode, data=None):
+        if not data:
+            data = self.keywords.get(self.path)
+        remaining = len(data)
+        self.label_info.configure(text='⏳ Please wait')
+        self.update_idletasks()
+        for keyword in data:
+            start = time.time()
+            stars, number = self.scraper.get_rating(keyword)
+            data[keyword]['stars'] = stars
+            data[keyword]['number'] = number
+            remaining-=1
+            duration = remaining * (time.time()-start)
+            if remaining:
+                self.label_info.configure(text=f'⌛ Please wait ({int(duration)} s left)')
+                self.update_idletasks()
+        match(mode):
+            case Mode.INSERT:
+                # ToDo: read and add metadata from file
+                self.database.insert(data)
+            case Mode.UPDATE:
+                self.database.update(data)
+        self.buffer = True
