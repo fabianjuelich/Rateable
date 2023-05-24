@@ -16,7 +16,7 @@ class App(ctk.CTk):
         ctk.set_default_color_theme(os.path.join(os.path.dirname(__file__), '../assets/custom_theme.json'))
         self.title('Rateable')
         self.geometry('400x200')
-        self.iconbitmap(os.path.join(os.path.dirname(__file__), '../assets/icons8-fünf-von-fünf-sternen-64.ico'))
+        self.iconbitmap(os.path.join(os.path.dirname(__file__), '../assets/Icons/icons8-fünf-von-fünf-sternen-64.ico'))
 
         for row in range(6):
             self.grid_rowconfigure(row, weight=1 if row in [0, 5] else 0)

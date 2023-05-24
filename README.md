@@ -1,5 +1,5 @@
 # Rateable
-![Icon](assets/icons8-f%C3%BCnf-von-f%C3%BCnf-sternen-64.png)
+![Icon](assets/Icons/icons8-f%C3%BCnf-von-f%C3%BCnf-sternen-64.png)
 
 Rateable is a multiplatform desktop application that allows users to scrape and collect rating data from Audible for chosen audiobooks. The collected data can be stored in an Excel file and as ID3-tags. Rateable provides a convenient way to organize and analyze audiobook ratings.
 
