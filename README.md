@@ -1,4 +1,5 @@
 # Rateable
+![Icon](assets/icons8-f%C3%BCnf-von-f%C3%BCnf-sternen-64.png)
 
 Rateable is a multiplatform desktop application that allows users to scrape and collect rating data from Audible for chosen audiobooks. The collected data can be stored in an Excel file and as ID3-tags. Rateable provides a convenient way to organize and analyze audiobook ratings.
 
@@ -16,11 +17,13 @@ Rateable is a multiplatform desktop application that allows users to scrape and 
 1. Clone the repository to your local machine.
 2. Install the required dependencies by running `pip install -r requirements.txt`.
 3. Follow the provided [steps to install the Chromium browser and its driver](https://www.chromium.org/getting-involved/download-chromium/#downloading-old-builds-of-chrome-chromium), which needs to be moved into the [assets folder](assets/).
-4. Run the app with a working internet connection using `python main.py` (optionally package with pyinstaller.sh to make it executable).
+4. Optionally: For better hits you can change the TLD used for scraping the Audible website to yours.
+5. Run the app with a working internet connection using `python main.py` (optionally package with pyinstaller.sh to make it executable).
 
 ## Usage
 
 1. Launch the Rateable application.
+![start-screen](assets/Screenshots/start-screen.png)
 2. Click the "Open Explorer" button to select the folder containing the audiobook files.
 3. Once the folder is selected, click the "Confirm" button to proceed.
 4. If it's the first time using the application, you will be prompted to specify the save path for the Excel file. Choose the desired location and provide a name for the file.
@@ -41,6 +44,7 @@ Insert screenshots of the application here.
 - [Pandas](https://pandas.pydata.org/)
 - [SQLite3](https://www.sqlite.org/index.html)
 - [Audible](https://www.audible.de/)
+- [icons8](https://icons8.de/)
 
 ## Contributing
 
