@@ -14,8 +14,9 @@ class App(ctk.CTk):
         super().__init__()
 
         ctk.set_default_color_theme(os.path.join(os.path.dirname(__file__), '../assets/custom_theme.json'))
-        self.title('ScrapeRate')
+        self.title('Rateable')
         self.geometry('400x200')
+        self.iconbitmap(os.path.join(os.path.dirname(__file__), '../assets/icons8-fünf-von-fünf-sternen-64.ico'))
 
         for row in range(6):
             self.grid_rowconfigure(row, weight=1 if row in [0, 5] else 0)
@@ -59,10 +60,7 @@ class App(ctk.CTk):
         elif not self.buffer:
             self.populate(Mode.INSERT, self.keywords.get(self.path))
         if not self.confirm_switch:
-            if not self.conf.get_excel_path():
-                self.label_info.configure(text='Specify save path')
-                self.update_idletasks()
-                self.conf.set_excel_path(filedialog.asksaveasfilename(initialdir=os.getcwd(), initialfile='ScrapeRate.xlsx'))
+            self.ask_excel_path()
             try:
                 self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
                 self.confirm_switch = True
@@ -72,7 +70,6 @@ class App(ctk.CTk):
                 self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'))
                 self.buffer = False
             except Exception as e:
-                print(e)
                 self.label_info.configure(text='⚠️ Invalid path')
 
     def callback_update(self):
@@ -81,10 +78,14 @@ class App(ctk.CTk):
         for keyword in keywords:
             data[keyword] = {}
         self.populate(Mode.UPDATE, data)
-        self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
-        self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state='normal')
-        self.label_info.configure(text='☁ Successfully updated')
-        self.confirm_switch = True
+        self.ask_excel_path()
+        try:
+            self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
+            self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state='normal')
+            self.label_info.configure(text='☁ Successfully updated')
+            self.confirm_switch = True
+        except:
+            self.label_info.configure(text='⚠️ Invalid path')
 
     def populate(self, mode, data):
         remaining = len(data)
@@ -108,3 +109,13 @@ class App(ctk.CTk):
             case Mode.UPDATE:
                 self.database.update(data)
         self.buffer = True
+
+    def ask_excel_path(self):
+        if not os.path.isfile(self.conf.get_excel_path()):
+            self.label_info.configure(text='Specify save path')
+            self.update_idletasks()
+            self.conf.set_excel_path(filedialog.asksaveasfilename(
+                initialdir=os.path.dirname(self.conf.get_excel_path()) if self.conf.get_excel_path() else os.getcwd(),
+                initialfile='ScrapeRate.xlsx',
+                filetypes=[('Excel files', '.xlsx .xls')]
+            ))

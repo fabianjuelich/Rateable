@@ -22,6 +22,5 @@ class Config(ConfigParser):
         return self.get('paths', 'excel') if self.has_option('paths', 'excel') else False
 
     def set_excel_path(self, path):
-        if path:
-            self.set('paths', 'excel', path)
-            self.__save()
+        self.set('paths', 'excel', path)
+        self.__save()
