@@ -84,8 +84,9 @@ class App(ctk.CTk):
             self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state='normal')
             self.label_info.configure(text='☁ Successfully updated')
             self.confirm_switch = True
-        except:
-            self.label_info.configure(text='⚠️ Invalid path')
+        except Exception as e:
+            print(e)
+            self.label_info.configure(text='⚠️ Error creating excel file')
 
     def populate(self, mode, data):
         remaining = len(data)
@@ -93,9 +94,10 @@ class App(ctk.CTk):
         self.update_idletasks()
         for keyword in data:
             start = time.time()
-            stars, number, url = self.scraper.get_rating(keyword)
+            stars, number, searchResult, url = self.scraper.get_rating(keyword)
             data[keyword]['stars'] = stars
             data[keyword]['number'] = number
+            data[keyword]['searchResult'] = searchResult
             data[keyword]['url'] = url
             remaining-=1
             duration = remaining * (time.time()-start)
@@ -116,6 +118,6 @@ class App(ctk.CTk):
             self.update_idletasks()
             self.conf.set_excel_path(filedialog.asksaveasfilename(
                 initialdir=os.path.dirname(self.conf.get_excel_path()) if self.conf.get_excel_path() else os.getcwd(),
-                initialfile='ScrapeRate.xlsx',
+                initialfile='Rateable.xlsx',
                 filetypes=[('Excel files', '.xlsx .xls')]
             ))

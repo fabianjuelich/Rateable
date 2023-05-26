@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 class Database:
     def __init__(self, path):
@@ -11,6 +12,7 @@ class Database:
                 keyword TEXT PRIMARY KEY,
                 stars REAL,
                 number INTEGER,
+                searchResult TEXT,
                 url TEXT,
                 path TEXT
             )
@@ -27,15 +29,17 @@ class Database:
                     ?,
                     ?,
                     ?,
+                    ?,
                     ?
                 )
-            ''', (
+                ''', (
                     key,
                     value['stars'],
                     value['number'],
+                    value['searchResult'],
                     value['url'],
                     value['path']
-                )
+                )   
             )
         self.connection.commit()
 
@@ -43,10 +47,19 @@ class Database:
         for key, value in rows.items():
             self.cursor.execute(f'''
                 UPDATE {self.table} SET
-                    stars = {value['stars']},
-                    number = {value['number']},
-                    url = '{value['url']}'
+                    stars = ?,
+                    number = ?,
+                    searchResult = ?,
+                    url = ?,
+                    path = {'path' if os.path.exists(self.cursor.execute(f'SELECT path FROM {self.table} WHERE keyword = ?', (key,)).fetchone()[0]) else '"N/A"'}
                 WHERE
-                    keyword = '{key}'
-            ''')
+                    keyword = ?
+                ''', (
+                    value['stars'],
+                    value['number'],
+                    value['searchResult'],
+                    value['url'],
+                    key
+                )
+            )
         self.connection.commit()
