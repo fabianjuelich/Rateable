@@ -28,6 +28,9 @@ class App(ctk.CTk):
         self.keywords = keywords
         self.database = database
         self.excel = excel
+        self.insert_buffer = False
+        self.update_buffer = False
+        self.path = ''
 
         # widgets
         self.label_info = ctk.CTkLabel(self, text='💽 Select audiobooks')
@@ -40,58 +43,66 @@ class App(ctk.CTk):
         self.button_confirm.grid(row=3, column=1, columnspan=2, pady=(5, 5), sticky='we')
         self.button_update.grid(row=4, column=1, columnspan=2, pady=(5, 0))
         # switch
-        self.folder_switch = False
         self.confirm_switch = False
 
     def callback_folder(self):
-        path = filedialog.askdirectory(title='💽 Select audiobooks', initialdir=os.path.expanduser('~/'))
+        path = filedialog.askdirectory(title='💽 Select audiobooks', initialdir=self.path if self.path else os.path.expanduser('~/'))
         if path:
             self.buffer = False
             self.path = path
             self.confirm_switch = False
             self.button_confirm.configure(text='Confirm', text_color=('#000000', '#FFFFFF'), state='normal')    #, state='disabled'
             self.button_folder.configure(text=os.path.basename(path), text_color=('#000000', '#FFFFFF'))
-            self.folder_switch = True
             self.label_info.configure(text='✅ Audiobooks selected')
 
     def callback_confirm(self):
         if self.confirm_switch:
             os.startfile(self.conf.get_excel_path())
-        elif not self.buffer:
-            self.populate(Mode.INSERT, self.keywords.get(self.path))
-        if not self.confirm_switch:
+        elif not self.insert_buffer:
+            keywords = self.keywords.get(self.path)
+            if keywords:
+                self.populate(Mode.INSERT, keywords)
+            else:
+                self.label_info.configure(text='⚠️ No audiobooks found')
+        if self.insert_buffer:
             self.ask_excel_path()
             try:
                 self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
                 self.confirm_switch = True
-                self.folder_switch = False
                 self.button_folder.configure(text='📂 Open Explorer', text_color=('#000000', '#FFFFFF'))
                 self.label_info.configure(text=f'💾 Saved to {os.path.basename(self.conf.get_excel_path())}')
                 self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'))
-                self.buffer = False
+                self.insert_buffer = False
+                self.update_buffer = False
             except Exception as e:
-                self.label_info.configure(text='⚠️ Invalid path')
+                self.label_info.configure(text='⚠️ Error creating excel file')
 
     def callback_update(self):
-        data = {}
-        keywords = [row[0] for row in self.database.select()]
-        for keyword in keywords:
-            data[keyword] = {}
-        self.populate(Mode.UPDATE, data)
-        self.ask_excel_path()
-        try:
-            self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
-            self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state='normal')
-            self.label_info.configure(text='☁ Successfully updated')
-            self.confirm_switch = True
-        except Exception as e:
-            print(e)
-            self.label_info.configure(text='⚠️ Error creating excel file')
+        if not self.update_buffer:
+            data = {}
+            keywords = [row[0] for row in self.database.select()]
+            for keyword in keywords:
+                data[keyword] = {}
+            if data:
+                self.populate(Mode.UPDATE, data)
+            else:
+                self.label_info.configure(text='⚠️ Table is empty')
+        if self.update_buffer:
+            self.ask_excel_path()
+            try:
+                self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
+                self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state='normal')
+                self.label_info.configure(text='☁ Successfully updated')
+                self.confirm_switch = True
+                self.update_buffer = False
+            except:
+                self.label_info.configure(text='⚠️ Error creating excel file')
 
     def populate(self, mode, data):
         remaining = len(data)
         self.label_info.configure(text='⏳ Please wait')
         self.update_idletasks()
+        duration = 0
         for keyword in data:
             start = time.time()
             stars, number, searchResult, url = self.scraper.get_rating(keyword)
@@ -100,21 +111,33 @@ class App(ctk.CTk):
             data[keyword]['searchResult'] = searchResult
             data[keyword]['url'] = url
             remaining-=1
-            duration = remaining * (time.time()-start)
-            if remaining:
-                self.label_info.configure(text=f'⌛ Please wait ({int(duration)} s left)')
-                self.update_idletasks()
+            if searchResult != 'N/A':
+                duration = remaining * (time.time()-start)
+            if duration and remaining:
+                if duration > 60:
+                    min, sec = map(int, divmod(duration, 60))
+                    left = f'{min}m {sec}s'
+                elif duration > 3600:
+                    hour, min = map(int, divmod(duration, 3600))
+                    left = f'{hour}h {min}m'
+                else:
+                    left = f'{int(duration)}s'
+                self.label_info.configure(text=f'⌛ Please wait ({left} left)')
+            self.update_idletasks()
         match(mode):
             case Mode.INSERT:
                 # ToDo: read and add metadata from file
                 self.database.insert(data)
+                self.update_buffer = False
+                self.insert_buffer = True
             case Mode.UPDATE:
                 self.database.update(data)
-        self.buffer = True
+                self.insert_buffer = False
+                self.update_buffer = True
 
     def ask_excel_path(self):
         if not os.path.isfile(self.conf.get_excel_path()):
-            self.label_info.configure(text='Specify save path')
+            self.label_info.configure(text='📁 Specify save path')
             self.update_idletasks()
             self.conf.set_excel_path(filedialog.asksaveasfilename(
                 initialdir=os.path.dirname(self.conf.get_excel_path()) if self.conf.get_excel_path() else os.getcwd(),
