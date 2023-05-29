@@ -14,13 +14,12 @@ keywords = Keywords()
 # id3 = ID3()
 database = Database(conf.get_db_path())
 excel = Excel()
-gui = App(conf, scraper, keywords, database, excel)  #, id3  # id3.modify([file], convert_rating(stars), both)
+gui = App(conf, scraper, keywords, database, excel)
 
 if len(sys.argv) > 1:
     path = sys.argv[1]
     for keyword in keywords.get(path):
-        print(keyword)
-        print(scraper.get_rating(keyword))
+        print(keyword, scraper.get_rating(keyword))
 else:
     gui.mainloop()
 
