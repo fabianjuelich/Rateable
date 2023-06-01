@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import os
+import json
 
 class Scraper():
 
@@ -34,11 +35,21 @@ class Scraper():
         select = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[5]/div[5]/div/div[2]/div[4]/div/div/div/span/ul/li[1]/div/div[1]/div/div[2]/div/div/span/ul/li[1]/h3/a')
         select.click()
         # rating
-        stars = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]/span[2]').text
-        text = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]').text.split('\n')[1]
+        #stars = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]/span[2]').text
+        #text = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[6]').text.split('\n')[1]
         searchResult = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[8]/div[2]/div/div[3]/div/div/div/div[2]/span/ul/li[1]/h1').text
         url = self.driver.find_element(By.XPATH, '/html/head/meta[11]').get_attribute('content')
-        return stars, text, searchResult, url
+        information = json.loads(self.driver.find_element(By.XPATH, '/html/body/div[1]/div[9]/script[1]').get_attribute('innerHTML'))
+        stars = round(float(information[0]['aggregateRating']['ratingValue']), 2)
+        number = int(information[0]['aggregateRating']['ratingCount'])
+        title = information[0]['name']
+        author = information[0]['author'][0]['name']
+        speaker = information[0]['readBy'][0]['name']
+        length = information[0]['duration']
+        date = information[0]['datePublished']
+        description = information[0]['description']
+        image = information[0]['image']
+        return stars, number, url, title, author, speaker, length, date, description, image
 
     def __convert_rating(self, stars):
         # ToDo: consider edgecases 0 and 5
@@ -59,8 +70,12 @@ class Scraper():
 
     def get_rating(self, keyword, byte=False):
         try:
-            stars, text, searchResult, url = self.__scrape_rating(keyword)
-            stars = float(stars.replace(',', '.'))
-            return self.__convert_rating(stars) if byte else stars, self.__format_number(text), searchResult, url
+            data = {}
+            keys = ['stars', 'number', 'url', 'title', 'author', 'speaker', 'length', 'date', 'description', 'image']
+            for (key, value) in zip(keys, self.__scrape_rating(keyword)):
+                data[key] = value
+            if byte:
+                data['stars'] = self.__convert_rating(data['stars'])
+            return data
         except:
-            return 'NULL', 'NULL', 'N/A', 'N/A'
+            return dict(zip(data, ['NULL', 'NULL', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A']))

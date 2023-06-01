@@ -12,8 +12,14 @@ class Database:
                 keyword TEXT PRIMARY KEY,
                 stars REAL,
                 number INTEGER,
-                searchResult TEXT,
                 url TEXT,
+                title TEXT,
+                author TEXT,
+                speaker TEXT,
+                length TEXT,
+                date TEXT,
+                description TEXT,
+                image TEXT,
                 path TEXT
             )
             ''')
@@ -30,14 +36,26 @@ class Database:
                     ?,
                     ?,
                     ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
                     ?
                 )
                 ''', (
                     key,
                     value['stars'],
                     value['number'],
-                    value['searchResult'],
                     value['url'],
+                    value['title'],
+                    value['author'],
+                    value['speaker'],
+                    value['length'],
+                    value['date'],
+                    value['description'],
+                    value['image'],
                     value['path']
                 )   
             )
@@ -49,16 +67,28 @@ class Database:
                 UPDATE {self.table} SET
                     stars = ?,
                     number = ?,
-                    searchResult = ?,
                     url = ?,
+                    title = ?,
+                    author = ?,
+                    speaker = ?,
+                    length = ?,
+                    date = ?,
+                    description = ?,
+                    image = ?,
                     path = {'path' if os.path.exists(self.cursor.execute(f'SELECT path FROM {self.table} WHERE keyword = ?', (key,)).fetchone()[0]) else '"N/A"'}
                 WHERE
                     keyword = ?
                 ''', (
                     value['stars'],
                     value['number'],
-                    value['searchResult'],
                     value['url'],
+                    value['title'],
+                    value['author'],
+                    value['speaker'],
+                    value['length'],
+                    value['date'],
+                    value['description'],
+                    value['image'],
                     key
                 )
             )

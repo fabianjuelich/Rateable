@@ -15,11 +15,11 @@ class App(ctk.CTk):
 
         ctk.set_default_color_theme(os.path.join(os.path.dirname(__file__), '../assets/custom_theme.json'))
         self.title('Rateable')
-        self.geometry('400x200')
+        self.geometry('400x240')
         self.iconbitmap(os.path.join(os.path.dirname(__file__), '../assets/Icons/icons8-fünf-von-fünf-sternen-64.ico'))
 
-        for row in range(6):
-            self.grid_rowconfigure(row, weight=1 if row in [0, 5] else 0)
+        for row in range(7):
+            self.grid_rowconfigure(row, weight=1 if row in [0, 6] else 0)
         for col in range(4):
             self.grid_columnconfigure(col, weight=1)
 
@@ -32,31 +32,38 @@ class App(ctk.CTk):
         self.update_buffer = False
         self.path = ''
 
+        # variables
+        self.variable_metadata = ctk.StringVar(value='ID3')
+        self.variable_metadata_update = ctk.BooleanVar(value=False)
         # widgets
         self.label_info = ctk.CTkLabel(self, text='💽 Select audiobooks')
         self.button_folder = ctk.CTkButton(self, text='📂 Open Explorer', command=self.callback_folder)
-        self.button_confirm = ctk.CTkButton(self, text='Confirm', command=self.callback_confirm, state='disabled')
+        self.button_confirm = ctk.CTkButton(self, text='Confirm', command=self.callback_confirm, state=ctk.DISABLED)
         self.button_update = ctk.CTkButton(self, text='🔄 Update', command=self.callback_update)
+        self.switch_metadata = ctk.CTkSwitch(self, text='Use ID3 tags', command=self.callback_metadata, variable=self.variable_metadata, offvalue='ID3', onvalue='Audible')
+        self.checkbox_update_metadata = ctk.CTkCheckBox(self, text='Update ID3 tags', variable=self.variable_metadata_update, offvalue=False, onvalue=True, state=ctk.DISABLED)
         # layout
         self.label_info.grid(row=1, column=1, columnspan=2, pady=(0, 10))
         self.button_folder.grid(row=2, column=1, columnspan=2, pady=(0, 5), sticky='we')
         self.button_confirm.grid(row=3, column=1, columnspan=2, pady=(5, 5), sticky='we')
-        self.button_update.grid(row=4, column=1, columnspan=2, pady=(5, 0))
-        # switch
-        self.confirm_switch = False
+        self.button_update.grid(row=4, column=1, columnspan=2, pady=(5, 5))
+        self.switch_metadata.grid(row=5, column=1, columnspan=1, pady=(10, 0))
+        self.checkbox_update_metadata.grid(row=5, column=2, columnspan=1, pady=(5, 0))
+        # states
+        self.confirm_state = False
 
     def callback_folder(self):
         path = filedialog.askdirectory(title='💽 Select audiobooks', initialdir=self.path if self.path else os.path.expanduser('~/'))
         if path:
             self.buffer = False
             self.path = path
-            self.confirm_switch = False
-            self.button_confirm.configure(text='Confirm', text_color=('#000000', '#FFFFFF'), state='normal')    #, state='disabled'
+            self.confirm_state = False
+            self.button_confirm.configure(text='Confirm', text_color=('#000000', '#FFFFFF'), state=ctk.NORMAL)    #, state=ctk.DISABLED
             self.button_folder.configure(text=os.path.basename(path), text_color=('#000000', '#FFFFFF'))
             self.label_info.configure(text='✅ Audiobooks selected')
 
     def callback_confirm(self):
-        if self.confirm_switch:
+        if self.confirm_state:
             os.startfile(self.conf.get_excel_path())
         elif not self.insert_buffer:
             keywords = self.keywords.get(self.path)
@@ -68,13 +75,13 @@ class App(ctk.CTk):
             self.ask_excel_path()
             try:
                 self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
-                self.confirm_switch = True
-                self.button_folder.configure(text='📂 Open Explorer', text_color=('#000000', '#FFFFFF'))
+                self.confirm_state = True
                 self.label_info.configure(text=f'💾 Saved to {os.path.basename(self.conf.get_excel_path())}')
                 self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'))
                 self.insert_buffer = False
                 self.update_buffer = False
             except Exception as e:
+                print(e)
                 self.label_info.configure(text='⚠️ Error creating excel file')
 
     def callback_update(self):
@@ -91,11 +98,12 @@ class App(ctk.CTk):
             self.ask_excel_path()
             try:
                 self.excel.create(self.database.table, self.database.connection, self.conf.get_excel_path())
-                self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state='normal')
+                self.button_confirm.configure(text='🗖 Open result', text_color=('#000000', '#FFFFFF'), state=ctk.NORMAL)
                 self.label_info.configure(text='☁ Successfully updated')
-                self.confirm_switch = True
+                self.confirm_state = True
                 self.update_buffer = False
-            except:
+            except Exception as e:
+                print(e)
                 self.label_info.configure(text='⚠️ Error creating excel file')
 
     def populate(self, mode, data):
@@ -105,13 +113,9 @@ class App(ctk.CTk):
         duration = 0
         for keyword in data:
             start = time.time()
-            stars, number, searchResult, url = self.scraper.get_rating(keyword)
-            data[keyword]['stars'] = stars
-            data[keyword]['number'] = number
-            data[keyword]['searchResult'] = searchResult
-            data[keyword]['url'] = url
+            data[keyword].update(self.scraper.get_rating(keyword))
             remaining-=1
-            if searchResult != 'N/A':
+            if data[keyword]['url'] != 'N/A':
                 duration = remaining * (time.time()-start)
             if duration and remaining:
                 if duration > 60:
@@ -126,7 +130,6 @@ class App(ctk.CTk):
             self.update_idletasks()
         match(mode):
             case Mode.INSERT:
-                # ToDo: read and add metadata from file
                 self.database.insert(data)
                 self.update_buffer = False
                 self.insert_buffer = True
@@ -144,3 +147,13 @@ class App(ctk.CTk):
                 initialfile='Rateable.xlsx',
                 filetypes=[('Excel files', '.xlsx .xls')]
             ))
+
+    def callback_metadata(self):
+        match (self.variable_metadata.get()):
+            case 'Audible':
+                self.switch_metadata.configure(text='Use Audible tags')
+                #self.checkbox_update_metadata.configure(state=ctk.NORMAL)
+            case 'ID3':
+                self.switch_metadata.configure(text='Use ID3 tags')
+                #self.checkbox_update_metadata.configure(state=ctk.DISABLED)
+                #self.variable_metadata_update = False
