@@ -21,7 +21,7 @@ class Scraper():
         if not directlink:
             self.website = 'https://audible.de/'
 
-    def __scrape_rating(self, keywords:str):
+    def __scrape_rating(self, keywords:str, tags):
         if not self.directlink:
             # searching
             self.driver.get(self.website)
@@ -42,14 +42,15 @@ class Scraper():
         information = json.loads(self.driver.find_element(By.XPATH, '/html/body/div[1]/div[9]/script[1]').get_attribute('innerHTML'))
         stars = round(float(information[0]['aggregateRating']['ratingValue']), 2)
         number = int(information[0]['aggregateRating']['ratingCount'])
-        title = information[0]['name']
-        author = information[0]['author'][0]['name']
-        speaker = information[0]['readBy'][0]['name']
-        length = information[0]['duration']
-        date = information[0]['datePublished']
-        description = information[0]['description']
-        image = information[0]['image']
-        return stars, number, url, title, author, speaker, length, date, description, image
+        if tags:
+            title = information[0]['name']
+            author = information[0]['author'][0]['name']
+            speaker = information[0]['readBy'][0]['name']
+            length = information[0]['duration']
+            date = information[0]['datePublished']
+            description = information[0]['description']
+            image = information[0]['image']
+        return (stars, number, url, title, author, speaker, length, date, description, image) if tags else (stars, number, url)
 
     def __convert_rating(self, stars):
         # ToDo: consider edgecases 0 and 5
@@ -68,14 +69,13 @@ class Scraper():
             i+=1
         return int(number.replace('.', ''))
 
-    def get_rating(self, keyword, byte=False):
+    def get_rating(self, keyword, keys, tags, byte=False):
         try:
             data = {}
-            keys = ['stars', 'number', 'url', 'title', 'author', 'speaker', 'length', 'date', 'description', 'image']
-            for (key, value) in zip(keys, self.__scrape_rating(keyword)):
+            for (key, value) in zip(keys, self.__scrape_rating(keyword, tags)):
                 data[key] = value
             if byte:
                 data['stars'] = self.__convert_rating(data['stars'])
             return data
         except:
-            return dict(zip(data, ['NULL', 'NULL', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A']))
+            return dict(zip(keys, ['NULL', 'NULL', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])) if tags else dict(zip(keys, ['NULL', 'NULL', 'N/A']))

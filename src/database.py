@@ -2,6 +2,7 @@ import sqlite3
 import os
 
 class Database:
+    
     def __init__(self, path):
         self.connection = sqlite3.connect(path)
         self.cursor = self.connection.cursor()
@@ -29,34 +30,10 @@ class Database:
 
     def insert(self, rows):
         for key, value in rows.items():
-            self.cursor.execute(f'''
-                INSERT OR REPLACE INTO {self.table} VALUES (
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?
-                )
-                ''', (
+            self.cursor.execute(
+                f'INSERT OR REPLACE INTO {self.table} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
                     key,
-                    value['stars'],
-                    value['number'],
-                    value['url'],
-                    value['title'],
-                    value['author'],
-                    value['speaker'],
-                    value['length'],
-                    value['date'],
-                    value['description'],
-                    value['image'],
-                    value['path']
+                    *[value[key] for key in [column for column in self.get_column_names() if column != 'keyword']]
                 )   
             )
         self.connection.commit()
@@ -79,17 +56,11 @@ class Database:
                 WHERE
                     keyword = ?
                 ''', (
-                    value['stars'],
-                    value['number'],
-                    value['url'],
-                    value['title'],
-                    value['author'],
-                    value['speaker'],
-                    value['length'],
-                    value['date'],
-                    value['description'],
-                    value['image'],
+                    *[value[key] for key in [column for column in self.get_column_names() if column not in ['keyword', 'path']]],
                     key
                 )
             )
         self.connection.commit()
+
+    def get_column_names(self):
+        return [name[0] for name in self.cursor.execute(f'SELECT name FROM pragma_table_info("{self.table}")').fetchall()]

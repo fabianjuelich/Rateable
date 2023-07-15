@@ -3,6 +3,7 @@ from tkinter import filedialog
 import os
 import time
 from enum import Enum, auto
+from glob import glob
 
 class Mode(Enum):
     INSERT = auto(),
@@ -10,7 +11,7 @@ class Mode(Enum):
 
 class App(ctk.CTk):
 
-    def __init__(self, conf, scraper, keywords, database, excel):
+    def __init__(self, conf, scraper, keywords, id3, database, excel):
         super().__init__()
 
         ctk.set_default_color_theme(os.path.join(os.path.dirname(__file__), '../assets/custom_theme.json'))
@@ -26,29 +27,34 @@ class App(ctk.CTk):
         self.conf = conf
         self.scraper = scraper
         self.keywords = keywords
+        self.id3 = id3
         self.database = database
         self.excel = excel
         self.insert_buffer = False
         self.update_buffer = False
         self.path = ''
+        self.columns = self.database.get_column_names()
+        self.data_keys = self.columns.copy()
+        self.data_keys.remove('keyword')
+        self.data_keys.remove('path')
 
         # variables
-        self.variable_metadata = ctk.StringVar(value='ID3')
-        self.variable_metadata_update = ctk.BooleanVar(value=False)
+        self.variable_tag_type = ctk.StringVar(value='ID3')
+        self.variable_id3_update = ctk.BooleanVar(value=False)
         # widgets
         self.label_info = ctk.CTkLabel(self, text='💽 Select audiobooks')
         self.button_folder = ctk.CTkButton(self, text='📂 Open Explorer', command=self.callback_folder)
         self.button_confirm = ctk.CTkButton(self, text='Confirm', command=self.callback_confirm, state=ctk.DISABLED)
         self.button_update = ctk.CTkButton(self, text='🔄 Update', command=self.callback_update)
-        self.switch_metadata = ctk.CTkSwitch(self, text='Use ID3 tags', command=self.callback_metadata, variable=self.variable_metadata, offvalue='ID3', onvalue='Audible')
-        self.checkbox_update_metadata = ctk.CTkCheckBox(self, text='Update ID3 tags', variable=self.variable_metadata_update, offvalue=False, onvalue=True, state=ctk.DISABLED)
+        self.switch_tag_type = ctk.CTkSwitch(self, text='Use ID3 tags', command=self.callback_metadata, variable=self.variable_tag_type, offvalue='ID3', onvalue='Audible')
+        self.checkbox_id3_update = ctk.CTkCheckBox(self, text='Update ID3 tags', variable=self.variable_id3_update, offvalue=False, onvalue=True, state=ctk.DISABLED)
         # layout
         self.label_info.grid(row=1, column=1, columnspan=2, pady=(0, 10))
         self.button_folder.grid(row=2, column=1, columnspan=2, pady=(0, 5), sticky='we')
         self.button_confirm.grid(row=3, column=1, columnspan=2, pady=(5, 5), sticky='we')
         self.button_update.grid(row=4, column=1, columnspan=2, pady=(5, 5))
-        self.switch_metadata.grid(row=5, column=1, columnspan=1, pady=(10, 0))
-        self.checkbox_update_metadata.grid(row=5, column=2, columnspan=1, pady=(5, 0))
+        self.switch_tag_type.grid(row=5, column=1, columnspan=1, pady=(10, 0))
+        self.checkbox_id3_update.grid(row=5, column=2, columnspan=1, pady=(5, 0))
         # states
         self.confirm_state = False
 
@@ -58,7 +64,7 @@ class App(ctk.CTk):
             self.buffer = False
             self.path = path
             self.confirm_state = False
-            self.button_confirm.configure(text='Confirm', text_color=('#000000', '#FFFFFF'), state=ctk.NORMAL)    #, state=ctk.DISABLED
+            self.button_confirm.configure(text='Confirm', text_color=('#000000', '#FFFFFF'), state=ctk.NORMAL)
             self.button_folder.configure(text=os.path.basename(path), text_color=('#000000', '#FFFFFF'))
             self.label_info.configure(text='✅ Audiobooks selected')
 
@@ -113,7 +119,11 @@ class App(ctk.CTk):
         duration = 0
         for keyword in data:
             start = time.time()
-            data[keyword].update(self.scraper.get_rating(keyword))
+            data[keyword].update(self.scraper.get_rating(keyword, self.data_keys, tags=True if self.variable_tag_type.get() == 'Audible' else False))
+            if self.variable_tag_type.get() == 'ID3':
+                audiofiles = glob(f'{data[keyword]["path"]}/*.mp3')
+                audiofile = audiofiles[0] if audiofiles else None
+                data[keyword].update(dict(zip(self.data_keys[3:10], self.id3.read(audiofile, ['title', 'artist', 'author', 'length', 'date', 'comment', 'image']))))   # image missing and author/artist needs to be tested + calc duration over all audiofiles
             remaining-=1
             if data[keyword]['url'] != 'N/A':
                 duration = remaining * (time.time()-start)
@@ -149,11 +159,11 @@ class App(ctk.CTk):
             ))
 
     def callback_metadata(self):
-        match (self.variable_metadata.get()):
+        match (self.variable_tag_type.get()):
             case 'Audible':
-                self.switch_metadata.configure(text='Use Audible tags')
+                self.switch_tag_type.configure(text='Use Audible tags')
                 #self.checkbox_update_metadata.configure(state=ctk.NORMAL)
             case 'ID3':
-                self.switch_metadata.configure(text='Use ID3 tags')
+                self.switch_tag_type.configure(text='Use ID3 tags')
                 #self.checkbox_update_metadata.configure(state=ctk.DISABLED)
                 #self.variable_metadata_update = False
